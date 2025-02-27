@@ -28,22 +28,39 @@
             font-size: 24px;
             margin-bottom: 20px;
         }
-        .form-section {
-            margin-bottom: 20px;
-        }
         .form-section label {
             display: block;
             margin-bottom: 8px;
             font-weight: bold;
         }
-        .form-section input, .form-section select {
+        .form-section input {
             width: 100%;
             padding: 8px;
             margin-bottom: 10px;
             border: 1px solid #ccc;
             border-radius: 5px;
         }
-        button {
+        .buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .buttons button {
+            flex: 1;
+            padding: 10px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            text-align: center;
+            transition: background-color 0.3s ease;
+        }
+        .buttons button:hover {
+            background-color: #0056b3;
+        }
+        button[type="submit"] {
             width: 100%;
             padding: 10px;
             background-color: #007BFF;
@@ -53,7 +70,7 @@
             cursor: pointer;
             transition: background-color 0.3s ease;
         }
-        button:hover {
+        button[type="submit"]:hover {
             background-color: #0056b3;
         }
         #result {
@@ -79,30 +96,32 @@
 <body>
 <div class="container">
     <h1>Bibliothèque Centrale</h1>
+    <div class="buttons">
+        <button id="checkStock" data-action="stock">Vérifier le stock</button>
+        <button id="borrowBook" data-action="emprunt">Emprunter un livre</button>
+        <button id="returnBook" data-action="retour">Retourner un livre</button>
+        <button id="addBook" data-action="ajouter">Ajouter un livre</button>
+    </div>
     <form id="mainForm">
-        <div class="form-section">
-            <label for="action">Choisissez une action :</label>
-            <select id="action" name="action" required>
-                <option value="">-- Sélectionnez une action --</option>
-                <option value="stock">Vérifier le stock d'un livre</option>
-                <option value="emprunt">Emprunter un livre</option>
-                <option value="retour">Retourner un livre</option>
-                <option value="ajouter">Ajouter un livre</option>
-            </select>
+        <div class="form-section hidden" id="isbnField">
+            <label for="bookId">ISBN du livre :</label>
+            <input type="text" id="bookId" name="bookId" placeholder="Entrez l'ISBN du livre" />
         </div>
-        <div id="additionalFields" class="hidden">
-            <div class="form-section hidden" id="bookField">
-                <label for="bookId">Nom ou ID du livre :</label>
-                <input type="text" id="bookId" name="bookId" placeholder="Entrez le livre..." />
-            </div>
-            <div class="form-section hidden" id="userField">
-                <label for="userId">Nom ou ID utilisateur :</label>
-                <input type="text" id="userId" name="userId" placeholder="Entrez votre nom ou identifiant..." />
-            </div>
-            <div class="form-section hidden" id="quantityField">
-                <label for="quantity">Quantité :</label>
-                <input type="number" id="quantity" name="quantity" placeholder="Ex: 5" min="1" step="1" />
-            </div>
+        <div class="form-section hidden" id="userField">
+            <label for="userId">ID utilisateur :</label>
+            <input type="text" id="userId" name="userId" placeholder="Entrez votre ID utilisateur" />
+        </div>
+        <div class="form-section hidden" id="quantityField">
+            <label for="quantity">Quantité :</label>
+            <input type="number" id="quantity" name="quantity" min="1" placeholder="Ex. 3" />
+        </div>
+        <div class="form-section hidden" id="titleFields">
+            <label for="bookTitle">Titre du livre :</label>
+            <input type="text" id="bookTitle" name="bookTitle" placeholder="Titre du livre" />
+            <label for="bookAuthor">Auteur du livre :</label>
+            <input type="text" id="bookAuthor" name="bookAuthor" placeholder="Auteur du livre" />
+            <label for="bookYear">Année de publication :</label>
+            <input type="number" id="bookYear" name="bookYear" placeholder="Ex. 2023" min="1900" max="2099" />
         </div>
         <button type="submit">Exécuter l'action</button>
     </form>
@@ -110,91 +129,90 @@
 </div>
 
 <script>
-    const API_GATEWAY_URL = "http://127.0.0.1:5000";
-    const actionSelect = document.getElementById("action");
-    const additionalFields = document.getElementById("additionalFields");
-    const bookField = document.getElementById("bookField");
-    const userField = document.getElementById("userField");
-    const quantityField = document.getElementById("quantityField");
+    const API_GATEWAY_URL = "http://127.0.0.1:5000"; // URL de l'API
     const resultDiv = document.getElementById("result");
+    let currentAction = null;
 
-    // Affichage des champs conditionnels selon l'action choisie
-    actionSelect.addEventListener("change", (event) => {
-        const selectedAction = event.target.value;
-
-        // Reset des champs
-        bookField.classList.add("hidden");
-        userField.classList.add("hidden");
-        quantityField.classList.add("hidden");
-        additionalFields.classList.add("hidden");
-
-        if (selectedAction === "stock") {
-            bookField.classList.remove("hidden");
-            additionalFields.classList.remove("hidden");
-        } else if (selectedAction === "emprunt") {
-            bookField.classList.remove("hidden");
-            userField.classList.remove("hidden");
-            additionalFields.classList.remove("hidden");
-        } else if (selectedAction === "retour") {
-            bookField.classList.remove("hidden");
-            userField.classList.remove("hidden");
-            additionalFields.classList.remove("hidden");
-        } else if (selectedAction === "ajouter") {
-            bookField.classList.remove("hidden");
-            quantityField.classList.remove("hidden");
-            additionalFields.classList.remove("hidden");
-        }
+    // Boutons d'action
+    document.querySelectorAll(".buttons button").forEach(button => {
+        button.addEventListener("click", () => {
+            currentAction = button.getAttribute("data-action");
+            console.clear();
+            console.log(`Action sélectionnée : ${currentAction}`);
+            showFieldsForAction(currentAction);
+        });
     });
 
-    // Soumission du formulaire
+    // Afficher les champs nécessaires selon l'action
+    function showFieldsForAction(action) {
+        console.log("Affichage des champs pour l'action :", action);
+        document.getElementById("isbnField").classList.remove("hidden");
+        document.getElementById("userField").classList.toggle("hidden", action !== "emprunt" && action !== "retour");
+        document.getElementById("quantityField").classList.toggle("hidden", action !== "ajouter");
+        document.getElementById("titleFields").classList.toggle("hidden", action !== "ajouter");
+        resultDiv.classList.add("hidden");
+    }
+
+    // Gestion de la soumission du formulaire
     document.getElementById("mainForm").addEventListener("submit", async (event) => {
         event.preventDefault();
 
-        const action = actionSelect.value;
         const bookId = document.getElementById("bookId").value.trim();
         const userId = document.getElementById("userId").value.trim();
-        const quantity = document.getElementById("quantity").value;
+        const quantity = parseInt(document.getElementById("quantity").value, 10);
+        const bookTitle = document.getElementById("bookTitle").value.trim();
+        const bookAuthor = document.getElementById("bookAuthor").value.trim();
+        const bookYear = document.getElementById("bookYear").value.trim();
 
-        let data = { action };
+        // Validation des champs obligatoires
+        if (!bookId) {
+            alert("Le champ 'ISBN du livre' est obligatoire.");
+            return;
+        }
+        if (currentAction === "ajouter" && (!bookTitle || !bookAuthor || !bookYear)) {
+            alert("Les champs Titre, Auteur et Année sont obligatoires pour ajouter un livre !");
+            return;
+        }
 
-        if (bookId) data.id_livre = bookId;
-        if (userId) data.utilisateur = userId;
-        if (quantity) data.quantite = parseInt(quantity, 10);
+        // Chargement des données à envoyer
+        let payload = { action: currentAction, id_livre: bookId };
+        if (currentAction === "emprunt" || currentAction === "retour") {
+            payload.utilisateur = userId;
+        }
+        if (currentAction === "ajouter") {
+            payload = {
+                action: currentAction,
+                id_livre: bookId,      // ISBN
+                titre: bookTitle,      // Titre du livre
+                auteur: bookAuthor,    // Auteur du livre
+                annee: parseInt(bookYear, 10), // Année de publication
+                stock: quantity || 1  // Quantité à ajouter (par défaut 1)
+            };
+        }
 
-        // Appel à l'API
-        const result = await effectuerAction(data);
-        console.log(result)
-        afficherMessage(JSON.stringify(result, null, 2) || "Opération terminée.", result.error ? "error" : "success");
-    });
+        console.log("Payload à envoyer :", payload);
 
-    // Appel générique à l'API
-    async function effectuerAction(data) {
-        afficherMessage("Patientez...", "success");
+        // Appel API
         try {
             const response = await fetch(`${API_GATEWAY_URL}/action`, {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify(data),
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
             });
 
-            if (response.ok) {
-                return await response.json();
-            } else {
-                return { message: `Erreur API : ${response.status}`, error: true };
-            }
-        } catch (error) {
-            return { message: "Impossible de se connecter au serveur.", error: true };
-        }
-    }
+            const result = await response.json();
+            console.log("Réponse reçue :", result);
 
-    // Affichage des messages
-    function afficherMessage(message, type) {
-        resultDiv.className = type === "error" ? "error" : "success";
-        resultDiv.innerHTML = `<p>${message}</p>`;
-        resultDiv.classList.remove("hidden");
-    }
+            resultDiv.textContent = result.message || "Action effectuée avec succès.";
+            resultDiv.className = response.ok ? "success" : "error";
+            resultDiv.classList.remove("hidden");
+        } catch (error) {
+            console.error("Erreur lors de l'appel API :", error);
+            resultDiv.textContent = "Une erreur réseau est survenue.";
+            resultDiv.className = "error";
+            resultDiv.classList.remove("hidden");
+        }
+    });
 </script>
 </body>
 </html>

@@ -17,7 +17,7 @@ start cmd /k "python microservice_retours.py"
 start cmd /k "python ui_api.py"
 
 :: Lancer l'interface client
-start cmd /k "python interface_client.py"
+:: start cmd /k "python interface_client.py"
 
 echo Tous les services ont été démarrés dans des terminaux distincts.
 pause

@@ -1,6 +1,8 @@
 from flask import Flask, request, jsonify
+import logging
 
 app = Flask(__name__)
+logging.basicConfig(level=logging.INFO)
 
 emprunts = {}
 
@@ -11,10 +13,14 @@ def enregistrer_emprunt():
     id_livre = data.get("id_livre")
     utilisateur = data.get("utilisateur")
 
+    if not id_livre or not utilisateur:
+        return jsonify({"message": "Les champs id_livre et utilisateur sont obligatoires."}), 400
+
     if utilisateur not in emprunts:
         emprunts[utilisateur] = []
     emprunts[utilisateur].append(id_livre)
 
+    logging.info(f"Livre {id_livre} emprunté par {utilisateur}")
     return jsonify({"message": f"Livre {id_livre} emprunté par {utilisateur}", "emprunts": emprunts[utilisateur]})
 
 

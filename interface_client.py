@@ -38,7 +38,7 @@ def verifier_stock():
     """
     Vérifie la disponibilité d'un livre.
     """
-    id_livre = input("Entrez le nom ou l'identifiant du livre : ")
+    id_livre = input("Entrez l'identifiant du livre : ")
     réponse = effectuer_action("stock", {"action": "stock", "id_livre": id_livre})
     if "stock" in réponse:
         print(f"Stock disponible pour '{id_livre}': {réponse['stock']} exemplaire(s).")
@@ -73,12 +73,13 @@ def retourner_livre():
 
 
 def ajouter_livre():
-    """
-    Ajoute un nouveau livre ou augmente le stock d'un livre existant.
-    """
-    id_livre = input("Entrez le nom ou l'identifiant du livre à ajouter : ")
-    quantite = int(input("Entrez la quantité à ajouter : "))
-    réponse = effectuer_action("ajouter", {"action": "ajouter", "id_livre": id_livre, "quantite": quantite})
+    isbn = input("Entrez l'ISBN du livre : ")
+    titre = input("Entrez le titre du livre : ")
+    auteur = input("Entrez l'auteur : ")
+    annee = int(input("Entrez l'année de publication : "))
+    quantite = int(input("Entrez la quantité : "))
+    data = {"action": "ajouter", "isbn": isbn, "titre": titre, "auteur": auteur, "annee": annee, "stock": quantite}
+    réponse = effectuer_action("ajouter", data)
     print(réponse.get("message", "Erreur lors de l'ajout du livre."))
 
 
