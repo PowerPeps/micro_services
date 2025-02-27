@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bibliothèque Centrale</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(120deg, #84ceeb, #5ab1d8);
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+            width: 400px;
+        }
+        h1 {
+            text-align: center;
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+        .form-section {
+            margin-bottom: 20px;
+        }
+        .form-section label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+        .form-section input, .form-section select {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #result {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #e0f7fa;
+            border-left: 4px solid #00796b;
+            border-radius: 5px;
+        }
+        .error {
+            background-color: #fcc;
+            border-left: 4px solid #d32f2f;
+        }
+        .success {
+            background-color: #e0f7fa;
+            border-left: 4px solid #00796b;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Bibliothèque Centrale</h1>
+    <form id="mainForm">
+        <div class="form-section">
+            <label for="action">Choisissez une action :</label>
+            <select id="action" name="action" required>
+                <option value="">-- Sélectionnez une action --</option>
+                <option value="stock">Vérifier le stock d'un livre</option>
+                <option value="emprunt">Emprunter un livre</option>
+                <option value="retour">Retourner un livre</option>
+                <option value="ajouter">Ajouter un livre</option>
+            </select>
+        </div>
+        <div id="additionalFields" class="hidden">
+            <div class="form-section hidden" id="bookField">
+                <label for="bookId">Nom ou ID du livre :</label>
+                <input type="text" id="bookId" name="bookId" placeholder="Entrez le livre..." />
+            </div>
+            <div class="form-section hidden" id="userField">
+                <label for="userId">Nom ou ID utilisateur :</label>
+                <input type="text" id="userId" name="userId" placeholder="Entrez votre nom ou identifiant..." />
+            </div>
+            <div class="form-section hidden" id="quantityField">
+                <label for="quantity">Quantité :</label>
+                <input type="number" id="quantity" name="quantity" placeholder="Ex: 5" min="1" step="1" />
+            </div>
+        </div>
+        <button type="submit">Exécuter l'action</button>
+    </form>
+    <div id="result" class="hidden"></div>
+</div>
+
+<script>
+    const API_GATEWAY_URL = "http://127.0.0.1:5000";
+    const actionSelect = document.getElementById("action");
+    const additionalFields = document.getElementById("additionalFields");
+    const bookField = document.getElementById("bookField");
+    const userField = document.getElementById("userField");
+    const quantityField = document.getElementById("quantityField");
+    const resultDiv = document.getElementById("result");
+
+    // Affichage des champs conditionnels selon l'action choisie
+    actionSelect.addEventListener("change", (event) => {
+        const selectedAction = event.target.value;
+
+        // Reset des champs
+        bookField.classList.add("hidden");
+        userField.classList.add("hidden");
+        quantityField.classList.add("hidden");
+        additionalFields.classList.add("hidden");
+
+        if (selectedAction === "stock") {
+            bookField.classList.remove("hidden");
+            additionalFields.classList.remove("hidden");
+        } else if (selectedAction === "emprunt") {
+            bookField.classList.remove("hidden");
+            userField.classList.remove("hidden");
+            additionalFields.classList.remove("hidden");
+        } else if (selectedAction === "retour") {
+            bookField.classList.remove("hidden");
+            userField.classList.remove("hidden");
+            additionalFields.classList.remove("hidden");
+        } else if (selectedAction === "ajouter") {
+            bookField.classList.remove("hidden");
+            quantityField.classList.remove("hidden");
+            additionalFields.classList.remove("hidden");
+        }
+    });
+
+    // Soumission du formulaire
+    document.getElementById("mainForm").addEventListener("submit", async (event) => {
+        event.preventDefault();
+
+        const action = actionSelect.value;
+        const bookId = document.getElementById("bookId").value.trim();
+        const userId = document.getElementById("userId").value.trim();
+        const quantity = document.getElementById("quantity").value;
+
+        let data = { action };
+
+        if (bookId) data.id_livre = bookId;
+        if (userId) data.utilisateur = userId;
+        if (quantity) data.quantite = parseInt(quantity, 10);
+
+        // Appel à l'API
+        const result = await effectuerAction(data);
+        console.log(result)
+        afficherMessage(JSON.stringify(result, null, 2) || "Opération terminée.", result.error ? "error" : "success");
+    });
+
+    // Appel générique à l'API
+    async function effectuerAction(data) {
+        afficherMessage("Patientez...", "success");
+        try {
+            const response = await fetch(`${API_GATEWAY_URL}/action`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify(data),
+            });
+
+            if (response.ok) {
+                return await response.json();
+            } else {
+                return { message: `Erreur API : ${response.status}`, error: true };
+            }
+        } catch (error) {
+            return { message: "Impossible de se connecter au serveur.", error: true };
+        }
+    }
+
+    // Affichage des messages
+    function afficherMessage(message, type) {
+        resultDiv.className = type === "error" ? "error" : "success";
+        resultDiv.innerHTML = `<p>${message}</p>`;
+        resultDiv.classList.remove("hidden");
+    }
+</script>
+</body>
+</html>
